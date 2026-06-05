@@ -13,8 +13,9 @@ public class Scrapper
         _client = client;
     }
 
-    public async Task ScrapProfesor(string letra)
+    public async Task<List<DocenteDTO>> ScrapProfesor(string letra)
     {
+        var listaDocentes = new List<DocenteDTO>();
         var url = "https://servicios.urjc.es/pdi/";
         var formData = new Dictionary<string, string>
         {
@@ -42,7 +43,12 @@ public class Scrapper
                 foreach (var nodo in nodosProfesores)
                 {
                     string profesorName = nodo.InnerText.Trim();
-                    Console.WriteLine($"Profesor encontrado: {profesorName}");
+                    if (!string.IsNullOrWhiteSpace(profesorName))
+                    {
+                        var docente = new DocenteDTO{Nombre = profesorName, UrlPerfil = "https://servicios.urjc.es" + nodo.GetAttributeValue("href","")};
+                        listaDocentes.Add(docente);
+                        Console.WriteLine($"Profesor encontrado: {profesorName}");    
+                    }
                 }
             }
             else
@@ -54,5 +60,6 @@ public class Scrapper
         {
             Console.WriteLine($"Error al acceder a la web: {ex.Message}");
         }
+        return listaDocentes;
     }
 }
