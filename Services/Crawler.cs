@@ -15,7 +15,7 @@ public class Crawler
 
     public async Task RastreoAsync()
     {
-        await _context.Database.EnsureCreatedAsync();
+        //await _context.Database.EnsureCreatedAsync();
 
         for (char letra = 'A'; letra <= 'Z'; letra++)
         {
