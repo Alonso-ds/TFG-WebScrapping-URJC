@@ -45,9 +45,9 @@ public class Scrapper
                     string profesorName = nodo.InnerText.Trim();
                     if (!string.IsNullOrWhiteSpace(profesorName))
                     {
-                        var docente = new DocenteDTO{Nombre = profesorName, UrlPerfil = "https://servicios.urjc.es" + nodo.GetAttributeValue("href","")};
+                        var docente = new DocenteDTO { Nombre = profesorName, UrlPerfil = "https://servicios.urjc.es" + nodo.GetAttributeValue("href", "") };
                         listaDocentes.Add(docente);
-                        Console.WriteLine($"Profesor encontrado: {profesorName}");    
+                        Console.WriteLine($"Profesor encontrado: {profesorName}");
                     }
                 }
             }
@@ -61,5 +61,45 @@ public class Scrapper
             Console.WriteLine($"Error al acceder a la web: {ex.Message}");
         }
         return listaDocentes;
+    }
+
+    public async Task ScrapDetallesProfesor(Docente docente)
+    {
+        try
+        {
+            Console.WriteLine($"Perfil de {docente.Nombre}...");
+            HttpResponseMessage response = await _client.GetAsync(docente.UrlPerfil);
+            response.EnsureSuccessStatusCode();
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(responseBody);
+
+            var nodoCargo = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'profile-usertitle-job')]");
+            if (nodoCargo != null)
+            {
+                docente.Cargo = nodoCargo.InnerHtml.Trim();
+                Console.WriteLine($"Cargo: {docente.Cargo}");
+            }
+
+            var nodoEmail = htmlDoc.DocumentNode.SelectSingleNode("//a[contains(@href, 'mailto:')]");
+            if (nodoEmail != null)
+            {
+                docente.Email = nodoEmail.InnerHtml.Trim();
+                Console.WriteLine($"Email: {docente.Email}");
+            }
+
+            var nodoCentro = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Centro')]/following-sibling::span");
+            if (nodoCentro != null)
+            {
+                docente.Centro = nodoCentro.InnerHtml.Trim();
+                Console.WriteLine($"Centro: {docente.Centro}");
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al acceder al perfil de {docente.Nombre}: {ex.Message}");
+        }
     }
 }

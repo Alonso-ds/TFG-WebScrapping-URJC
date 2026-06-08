@@ -1,5 +1,7 @@
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
 
 
 public class Crawler
@@ -22,10 +24,25 @@ public class Crawler
             Console.WriteLine($"Letra: {letra}");
             List<DocenteDTO> dtos = await _scrapper.ScrapProfesor(letra.ToString());
             foreach (var dto in dtos)
-            if (!string.IsNullOrWhiteSpace(dto.Nombre))
             {
-                var nuevoDocente = new Docente{Nombre = dto.Nombre, UrlPerfil = dto.UrlPerfil};
-                _context.Add(nuevoDocente);
+                if (!string.IsNullOrWhiteSpace(dto.Nombre))
+                {
+                    var docenteExistente = await _context.Docentes.FirstOrDefaultAsync(d => d.UrlPerfil == dto.UrlPerfil);
+
+                    if (docenteExistente != null)
+                    {
+                        docenteExistente.Nombre = dto.Nombre;
+                        await _scrapper.ScrapDetallesProfesor(docenteExistente);
+                        Console.WriteLine($"Profesor actualizado: {docenteExistente.Nombre}");
+                    }
+                    else
+                    {
+                        var nuevoDocente = new Docente { Nombre = dto.Nombre, UrlPerfil = dto.UrlPerfil };
+                        await _scrapper.ScrapDetallesProfesor(nuevoDocente);
+                        _context.Add(nuevoDocente);
+                        Console.WriteLine($"Profesor nuevo: {nuevoDocente.Nombre}");
+                    }
+                }
             }
             int filasInsertadas = await _context.SaveChangesAsync();
             Console.WriteLine($"{filasInsertadas} profesores con la letra {letra}");

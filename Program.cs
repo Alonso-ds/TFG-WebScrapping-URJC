@@ -14,6 +14,11 @@ class Program
         builder.Services.AddDbContext<UniDbContext>(options => options.UseSqlite("Data Source=universidad.db"));
 
         var host = builder.Build();
+        using (var scope = host.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<UniDbContext>();
+            await dbContext.Database.MigrateAsync();
+        }
         var crawler = host.Services.GetRequiredService<Crawler>();
         await crawler.RastreoAsync();
     }
