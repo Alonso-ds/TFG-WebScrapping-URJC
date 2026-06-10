@@ -16,10 +16,16 @@ public class Docente
     public string? Centro {get; set;}
     public string? Departamento {get; set;}
     public string? Area {get; set;}
-    public string? Biografia {get; set;}
+    public bool TieneBiografia {get; set;}
+
+    public string? GrupoInvestigación {get; set;}
+    public string? GrupoDocente {get; set;}
+    public string? CentroInvestigación {get; set;}
 
     public int? Quinquenios {get; set;}
-    public int? Sexenios {get; set;}
+    public int? SexeniosInvestigación {get; set;}
+
+    public int? SexeniosTransferencia {get; set;}
     public int? Docentia {get; set;}
 
 }

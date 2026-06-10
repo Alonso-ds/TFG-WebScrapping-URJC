@@ -43,10 +43,12 @@ public class Crawler
                         Console.WriteLine($"Profesor nuevo: {nuevoDocente.Nombre}");
                     }
                 }
+                await _context.SaveChangesAsync();
+                await Task.Delay(2000);
             }
-            int filasInsertadas = await _context.SaveChangesAsync();
-            Console.WriteLine($"{filasInsertadas} profesores con la letra {letra}");
-            await Task.Delay(new Random().Next(2000, 4000));
+            //int filasInsertadas = await _context.SaveChangesAsync();
+            //Console.WriteLine($"{filasInsertadas} profesores con la letra {letra}");
+            await Task.Delay(2000);
         }
     }
 }

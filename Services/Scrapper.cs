@@ -96,6 +96,49 @@ public class Scrapper
                 Console.WriteLine($"Centro: {docente.Centro}");
             }
 
+            var nodoDepartamento = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Departamento')]/following-sibling::span");
+            if(nodoDepartamento != null)
+            {
+                docente.Departamento = nodoDepartamento.InnerHtml.Trim();
+                Console.WriteLine($"Departamento: {docente.Departamento}");
+            }
+            var nodoArea = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Área')]/following-sibling::span");
+            if(nodoArea != null)
+            {
+                docente.Area = nodoArea.InnerHtml.Trim();
+                Console.WriteLine($"Área: {docente.Area}");
+            }
+            var nodoGrupoInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo de investigacion')]/following-sibling::a");
+            if(nodoGrupoInv!= null)
+            {
+                docente.GrupoInvestigación = nodoGrupoInv.InnerHtml.Trim();
+                Console.WriteLine($"Grupo investigacion: {docente.GrupoInvestigación}");
+            }
+            
+            var nodoCentroInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Centro/Instituto de investigación')]/following-sibling::a");
+            if(nodoCentroInv != null)
+            {
+                docente.CentroInvestigación = nodoCentroInv.InnerHtml.Trim();
+                Console.WriteLine($"Centro Investigacion: {docente.GrupoInvestigación}");
+            }
+            var nodoGrupoDocente = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo docente')]/following-sibling::a");
+            if(nodoGrupoDocente != null)
+            {
+                docente.GrupoDocente = nodoGrupoDocente.InnerHtml.Trim();
+                Console.WriteLine($"Centro Investigacion: {docente.GrupoDocente}");
+            }
+
+            var nodoBiografia = htmlDoc.DocumentNode.SelectSingleNode("//div[@id='tab_presentacion']//li[contains(@class, 'list-group-item')]");
+            if(nodoBiografia != null)
+            {
+                string textoLimpio = nodoBiografia.InnerText.Trim();
+                docente.TieneBiografia = !string.IsNullOrWhiteSpace(textoLimpio) && textoLimpio.Length > 20; //algo mas de 20 caracteres...
+            }
+            else
+            {
+                docente.TieneBiografia = false;
+            }
+            Console.WriteLine($"¿Biografía?: {(docente.TieneBiografia ? "SÍ" : "NO")}");
         }
         catch (Exception ex)
         {
