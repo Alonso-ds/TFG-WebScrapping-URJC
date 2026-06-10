@@ -20,6 +20,14 @@ class Program
             await dbContext.Database.MigrateAsync();
         }
         var crawler = host.Services.GetRequiredService<Crawler>();
-        await crawler.RastreoAsync();
+        try
+        {
+            await crawler.RastreoAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CRASH FATAL] Mensaje: {ex.Message}");
+        }
+        
     }
 }

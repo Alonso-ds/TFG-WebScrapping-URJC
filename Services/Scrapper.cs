@@ -139,10 +139,30 @@ public class Scrapper
                 docente.TieneBiografia = false;
             }
             Console.WriteLine($"¿Biografía?: {(docente.TieneBiografia ? "SÍ" : "NO")}");
+
+            docente.Quinquenios = ExtraerInt(htmlDoc, "Quinquenios");
+            docente.SexeniosInvestigación = ExtraerInt(htmlDoc, "Sexenios investigación");
+            docente.SexeniosTransferencia = ExtraerInt(htmlDoc, "Sexenios transferencia");
+            docente.Docentia = ExtraerInt(htmlDoc, "Docentia");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error al acceder al perfil de {docente.Nombre}: {ex.Message}");
         }
     }
+
+    private int? ExtraerInt(HtmlDocument htmlDoc, string tipo)
+    {
+        string xpath = $"//div[contains(@class, 'profile-stat-text') and contains(., '{tipo}')]/preceding-sibling::div[contains(@class, 'profile-stat-title')]";
+        var nodoInt = htmlDoc.DocumentNode.SelectSingleNode(xpath);
+        if(nodoInt != null)
+        {
+            string intLimpio = nodoInt.InnerText.Trim();
+            if(int.TryParse(intLimpio, out int resultado))
+            {
+                return resultado;
+            }
+        }
+        return null;
+    } 
 }
