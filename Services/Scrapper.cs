@@ -78,61 +78,64 @@ public class Scrapper
             var nodoCargo = htmlDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'profile-usertitle-job')]");
             if (nodoCargo != null)
             {
-                docente.Cargo = nodoCargo.InnerHtml.Trim();
+                docente.Cargo = nodoCargo.InnerText.Trim();
                 Console.WriteLine($"Cargo: {docente.Cargo}");
             }
 
             var nodoEmail = htmlDoc.DocumentNode.SelectSingleNode("//a[contains(@href, 'mailto:')]");
             if (nodoEmail != null)
             {
-                docente.Email = nodoEmail.InnerHtml.Trim();
+                docente.Email = nodoEmail.InnerText.Trim();
                 Console.WriteLine($"Email: {docente.Email}");
             }
 
             var nodoCentro = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Centro')]/following-sibling::span");
             if (nodoCentro != null)
             {
-                docente.Centro = nodoCentro.InnerHtml.Trim();
+                docente.Centro = nodoCentro.InnerText.Trim();
                 Console.WriteLine($"Centro: {docente.Centro}");
             }
-
-            var nodoDepartamento = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Departamento')]/following-sibling::span");
+ 
+            var nodoDepartamento = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Departamento')]/following-sibling::a");
             if(nodoDepartamento != null)
             {
-                docente.Departamento = nodoDepartamento.InnerHtml.Trim();
+                docente.Departamento = nodoDepartamento.InnerText.Trim();
                 Console.WriteLine($"Departamento: {docente.Departamento}");
             }
             var nodoArea = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Área')]/following-sibling::span");
             if(nodoArea != null)
             {
-                docente.Area = nodoArea.InnerHtml.Trim();
+                docente.Area = nodoArea.InnerText.Trim();
                 Console.WriteLine($"Área: {docente.Area}");
             }
-            var nodoGrupoInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo de investigacion')]/following-sibling::a");
+            var nodoGrupoInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo de investigación')]/following-sibling::a");
             if(nodoGrupoInv!= null)
             {
-                docente.GrupoInvestigación = nodoGrupoInv.InnerHtml.Trim();
+                docente.GrupoInvestigación = nodoGrupoInv.InnerText.Trim();
                 Console.WriteLine($"Grupo investigacion: {docente.GrupoInvestigación}");
             }
             
             var nodoCentroInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Centro/Instituto de investigación')]/following-sibling::a");
             if(nodoCentroInv != null)
             {
-                docente.CentroInvestigación = nodoCentroInv.InnerHtml.Trim();
-                Console.WriteLine($"Centro Investigacion: {docente.GrupoInvestigación}");
+                docente.CentroInvestigación = nodoCentroInv.InnerText.Trim();
+                Console.WriteLine($"Centro Investigacion: {docente.CentroInvestigación}");
             }
             var nodoGrupoDocente = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo docente')]/following-sibling::a");
             if(nodoGrupoDocente != null)
             {
-                docente.GrupoDocente = nodoGrupoDocente.InnerHtml.Trim();
-                Console.WriteLine($"Centro Investigacion: {docente.GrupoDocente}");
+                docente.GrupoDocente = nodoGrupoDocente.InnerText.Trim();
+                Console.WriteLine($"Grupo Docente: {docente.GrupoDocente}");
             }
 
             var nodoBiografia = htmlDoc.DocumentNode.SelectSingleNode("//div[@id='tab_presentacion']//li[contains(@class, 'list-group-item')]");
             if(nodoBiografia != null)
             {
                 string textoLimpio = nodoBiografia.InnerText.Trim();
-                docente.TieneBiografia = !string.IsNullOrWhiteSpace(textoLimpio) && textoLimpio.Length > 20; //algo mas de 20 caracteres...
+
+                bool esAviso = textoLimpio.Contains("No existe información");
+
+                docente.TieneBiografia = !string.IsNullOrWhiteSpace(textoLimpio) && textoLimpio.Length > 20 && !esAviso; //algo mas de 20 caracteres...
             }
             else
             {
