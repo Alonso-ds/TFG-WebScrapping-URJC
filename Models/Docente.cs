@@ -28,4 +28,5 @@ public class Docente
     public int? SexeniosTransferencia {get; set;}
     public int? Docentia {get; set;}
 
+    public List<Proyecto> Proyectos{get; set;} = new();
 }

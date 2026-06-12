@@ -26,7 +26,7 @@ class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CRASH FATAL] Mensaje: {ex.Message}");
+            Console.WriteLine($"Crash message: {ex.Message}");
         }
         
     }

@@ -7,10 +7,12 @@ public class Scrapper
 {
 
     private readonly HttpClient _client;
+    private readonly UniDbContext _context;
 
-    public Scrapper(HttpClient client)
+    public Scrapper(HttpClient client, UniDbContext context)
     {
         _client = client;
+        _context = context;    
     }
 
     public async Task<List<DocenteDTO>> ScrapProfesor(string letra)
@@ -147,6 +149,56 @@ public class Scrapper
             docente.SexeniosInvestigación = ExtraerInt(htmlDoc, "Sexenios investigación");
             docente.SexeniosTransferencia = ExtraerInt(htmlDoc, "Sexenios transferencia");
             docente.Docentia = ExtraerInt(htmlDoc, "Docentia");
+
+            docente.Proyectos = new List<Proyecto>();
+
+            var nodosProyectos = htmlDoc.DocumentNode.SelectNodes("//div[@id='tab_proyectos']//div[contains(@class, 'panel-default')]");
+            if (nodosProyectos != null)
+            {
+                foreach(var nodoProyecto in nodosProyectos)
+                {
+                    var nodoTitulo = nodoProyecto.SelectSingleNode(".//h4[@class='panel-title']/a");
+                    if (nodoTitulo == null) continue;
+
+                    string tituloProyecto = nodoTitulo.InnerText.Trim();
+                    if(!string.IsNullOrWhiteSpace(tituloProyecto)) continue;
+
+                    string? refInterna = ExtraerText(nodoProyecto, "Referencia interna:");
+                    Proyecto? proyectoExistente = null;
+
+                    if (!string.IsNullOrWhiteSpace(refInterna))
+                    {
+                        proyectoExistente = _context.Proyectos.FirstOrDefault(p => p.RefInterna == refInterna);
+                    }
+                    else //Por si acaso
+                    {
+                        proyectoExistente = _context.Proyectos.FirstOrDefault(p => p.Titulo == tituloProyecto);
+                    }
+
+                    if(proyectoExistente != null)
+                    {
+                        docente.Proyectos.Add(proyectoExistente);
+                        Console.WriteLine($"Proyecto encontrado {proyectoExistente.Titulo}");
+                    }
+                    else
+                    {
+                        var nuevoProyecto = new Proyecto{Titulo = tituloProyecto};
+                        nuevoProyecto.FechaInicio = ExtraerText(nodoProyecto, "Fecha inicio:");
+                        nuevoProyecto.FechaFinal = ExtraerText(nodoProyecto, "Fecha fin:");
+                        nuevoProyecto.EntidadFinanciadora = ExtraerText(nodoProyecto, "Entidad financiera:");
+                        nuevoProyecto.RefExterna = ExtraerText(nodoProyecto, "Referencia externa:");
+                        nuevoProyecto.RefInterna = ExtraerText(nodoProyecto, "Referencia interna:");
+                        
+                        nuevoProyecto.InvPrincipales = ExtraerText(nodoProyecto, "Investigador/es principal/es:");
+                        nuevoProyecto.Investigadores = ExtraerText(nodoProyecto, "Investigadores:");
+                        nuevoProyecto.InvestigadoresTecnicos = ExtraerText(nodoProyecto, "Investigadores o Técnicos:");
+                        nuevoProyecto.Colaboradores = ExtraerText(nodoProyecto, "Otros colaboradores:");
+
+                        docente.Proyectos.Add(nuevoProyecto);
+                        Console.WriteLine($"Proyecto creado {nuevoProyecto.Titulo}");
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -165,6 +217,32 @@ public class Scrapper
             {
                 return resultado;
             }
+        }
+        return null;
+    }
+
+    private string? ExtraerText(HtmlNode nodo, string etiqueta)
+    {
+        string xpath =$".//b[contains(text(), '{etiqueta}')]/following-sibling::text()[1]";
+        var nodoTexto = nodo.SelectSingleNode(xpath);
+
+        if (nodoTexto != null)
+        {
+            string content = nodoTexto.InnerText.Replace("&nbsp", "").Trim();
+            return string.IsNullOrWhiteSpace(content) ? null : content;
+        }
+        return null;
+    }
+
+    private string? ExtraerConComas(HtmlNode nodo, string etiqueta)
+    {
+        string xpath =$".//b[contains(text(), '{etiqueta}')]/ancestor::p/following-sibling::ul[1]/li";
+        var nodoList = nodo.SelectNodes(xpath);
+
+        if (nodoList != null)
+        {
+            var nombres = nodoList.Select(n=> n.InnerText.Trim()).Where(n=> !string.IsNullOrWhiteSpace(n));
+            return string.Join(",", nombres);
         }
         return null;
     } 
