@@ -7,12 +7,10 @@ public class Scrapper
 {
 
     private readonly HttpClient _client;
-    private readonly UniDbContext _context;
 
-    public Scrapper(HttpClient client, UniDbContext context)
+    public Scrapper(HttpClient client)
     {
-        _client = client;
-        _context = context;    
+        _client = client; 
     }
 
     public async Task<List<DocenteDTO>> ScrapProfesor(string letra)
@@ -65,7 +63,7 @@ public class Scrapper
         return listaDocentes;
     }
 
-    public async Task ScrapDetallesProfesor(Docente docente)
+    public async Task ScrapDetallesProfesor(Docente docente, UniDbContext context)
     {
         try
         {
@@ -150,11 +148,10 @@ public class Scrapper
             docente.SexeniosTransferencia = ExtraerInt(htmlDoc, "Sexenios transferencia");
             docente.Docentia = ExtraerInt(htmlDoc, "Docentia");
 
-            docente.Proyectos = new List<Proyecto>();
-
             var nodosProyectos = htmlDoc.DocumentNode.SelectNodes("//div[@id='tab_proyectos']//div[contains(@class, 'panel-default')]");
             if (nodosProyectos != null)
             {
+                Console.WriteLine($"Se han encontrado {nodosProyectos.Count} proyectos");
                 foreach(var nodoProyecto in nodosProyectos)
                 {
                     var nodoTitulo = nodoProyecto.SelectSingleNode(".//h4[@class='panel-title']/a");
@@ -168,17 +165,20 @@ public class Scrapper
 
                     if (!string.IsNullOrWhiteSpace(refInterna))
                     {
-                        proyectoExistente = _context.Proyectos.FirstOrDefault(p => p.RefInterna == refInterna);
+                        proyectoExistente = context.Proyectos.FirstOrDefault(p => p.RefInterna == refInterna);
                     }
                     else //Por si acaso
                     {
-                        proyectoExistente = _context.Proyectos.FirstOrDefault(p => p.Titulo == tituloProyecto);
+                        proyectoExistente = context.Proyectos.FirstOrDefault(p => p.Titulo == tituloProyecto);
                     }
 
                     if(proyectoExistente != null)
                     {
-                        docente.Proyectos.Add(proyectoExistente);
-                        Console.WriteLine($"Proyecto encontrado {proyectoExistente.Titulo}");
+                        if(!docente.Proyectos.Any(p=> p.Id == proyectoExistente.Id))
+                        {
+                            docente.Proyectos.Add(proyectoExistente);
+                            Console.WriteLine($"Proyecto encontrado {proyectoExistente.Titulo}");
+                        }
                     }
                     else
                     {
@@ -193,6 +193,8 @@ public class Scrapper
                         nuevoProyecto.Investigadores = ExtraerText(nodoProyecto, "Investigadores:");
                         nuevoProyecto.InvestigadoresTecnicos = ExtraerText(nodoProyecto, "Investigadores o Técnicos:");
                         nuevoProyecto.Colaboradores = ExtraerText(nodoProyecto, "Otros colaboradores:");
+
+                        context.Proyectos.Add(nuevoProyecto);
 
                         docente.Proyectos.Add(nuevoProyecto);
                         Console.WriteLine($"Proyecto creado {nuevoProyecto.Titulo}");

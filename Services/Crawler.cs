@@ -34,18 +34,18 @@ public class Crawler
                 {
                     if (!string.IsNullOrWhiteSpace(dto.Nombre))
                     {
-                        var docenteExistente = await _context.Docentes.FirstOrDefaultAsync(d => d.UrlPerfil == dto.UrlPerfil);
+                        var docenteExistente = await _context.Docentes.Include(d => d.Proyectos).FirstOrDefaultAsync(d => d.UrlPerfil == dto.UrlPerfil);
 
                         if (docenteExistente != null)
                         {
                             docenteExistente.Nombre = dto.Nombre;
-                            await _scrapper.ScrapDetallesProfesor(docenteExistente);
+                            await _scrapper.ScrapDetallesProfesor(docenteExistente, _context);
                             Console.WriteLine($"Profesor actualizado: {docenteExistente.Nombre}");
                         }
                         else
                         {
                             var nuevoDocente = new Docente { Nombre = dto.Nombre, UrlPerfil = dto.UrlPerfil };
-                            await _scrapper.ScrapDetallesProfesor(nuevoDocente);
+                            await _scrapper.ScrapDetallesProfesor(nuevoDocente, _context);
                             _context.Add(nuevoDocente);
                             Console.WriteLine($"Profesor nuevo: {nuevoDocente.Nombre}");
                         }
