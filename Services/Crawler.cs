@@ -45,12 +45,21 @@ public class Crawler
                         else
                         {
                             var nuevoDocente = new Docente { Nombre = dto.Nombre, UrlPerfil = dto.UrlPerfil };
-                            await _scrapper.ScrapDetallesProfesor(nuevoDocente, _context);
                             _context.Add(nuevoDocente);
+                            await _scrapper.ScrapDetallesProfesor(nuevoDocente, _context);
                             Console.WriteLine($"Profesor nuevo: {nuevoDocente.Nombre}");
                         }
                     }
-                    await _context.SaveChangesAsync();
+                    try{
+                        await _context.SaveChangesAsync();
+                    }catch(Exception ex)
+                    {
+                        Console.WriteLine($"Error BBDD: {ex.Message}");
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"{ex.InnerException.Message}");
+                        }
+                    }
                     await Task.Delay(1000);
                 }
                 //int filasInsertadas = await _context.SaveChangesAsync();

@@ -154,11 +154,24 @@ public class Scrapper
                 Console.WriteLine($"Se han encontrado {nodosProyectos.Count} proyectos");
                 foreach(var nodoProyecto in nodosProyectos)
                 {
-                    var nodoTitulo = nodoProyecto.SelectSingleNode(".//h4[@class='panel-title']/a");
-                    if (nodoTitulo == null) continue;
+                    var nodoTitulo = nodoProyecto.SelectSingleNode(".//a[contains(@class, 'accordion-toggle')]");
+                    if (nodoTitulo == null)
+                    {
+                        nodoTitulo = nodoProyecto.SelectSingleNode(".//h4[contains(@class, 'panel-title')]");
+                    }
 
-                    string tituloProyecto = nodoTitulo.InnerText.Trim();
-                    if(!string.IsNullOrWhiteSpace(tituloProyecto)) continue;
+                    if (nodoTitulo == null)
+                    {
+                        Console.WriteLine("No se encontró etiqueta para el titulo");
+                    }
+
+                    string tituloProyecto = nodoTitulo.InnerText.Replace("\n", "").Replace("\r", "").Trim();
+                    if (string.IsNullOrWhiteSpace(tituloProyecto))
+                    {
+                        Console.WriteLine("Se encontró titulo vacío");
+                    }
+
+                    Console.WriteLine($"TITULO PROYECTO: {tituloProyecto}");
 
                     string? refInterna = ExtraerText(nodoProyecto, "Referencia interna:");
                     Proyecto? proyectoExistente = null;
@@ -174,7 +187,7 @@ public class Scrapper
 
                     if(proyectoExistente != null)
                     {
-                        if(!docente.Proyectos.Any(p=> p.Id == proyectoExistente.Id))
+                        if(!docente.Proyectos.Contains(proyectoExistente))
                         {
                             docente.Proyectos.Add(proyectoExistente);
                             Console.WriteLine($"Proyecto encontrado {proyectoExistente.Titulo}");
@@ -182,17 +195,19 @@ public class Scrapper
                     }
                     else
                     {
-                        var nuevoProyecto = new Proyecto{Titulo = tituloProyecto};
-                        nuevoProyecto.FechaInicio = ExtraerText(nodoProyecto, "Fecha inicio:");
-                        nuevoProyecto.FechaFinal = ExtraerText(nodoProyecto, "Fecha fin:");
-                        nuevoProyecto.EntidadFinanciadora = ExtraerText(nodoProyecto, "Entidad financiera:");
-                        nuevoProyecto.RefExterna = ExtraerText(nodoProyecto, "Referencia externa:");
-                        nuevoProyecto.RefInterna = ExtraerText(nodoProyecto, "Referencia interna:");
-                        
-                        nuevoProyecto.InvPrincipales = ExtraerText(nodoProyecto, "Investigador/es principal/es:");
-                        nuevoProyecto.Investigadores = ExtraerText(nodoProyecto, "Investigadores:");
-                        nuevoProyecto.InvestigadoresTecnicos = ExtraerText(nodoProyecto, "Investigadores o Técnicos:");
-                        nuevoProyecto.Colaboradores = ExtraerText(nodoProyecto, "Otros colaboradores:");
+                        var nuevoProyecto = new Proyecto
+                        {
+                            Titulo = tituloProyecto,
+                            RefInterna = refInterna,
+                            FechaInicio = ExtraerText(nodoProyecto, "Fecha inicio:"),
+                            FechaFinal = ExtraerText(nodoProyecto, "Fecha fin:"),
+                            EntidadFinanciadora = ExtraerText(nodoProyecto, "Entidad financiera:"),
+                            RefExterna = ExtraerText(nodoProyecto, "Referencia externa:"),
+                            InvPrincipales = ExtraerText(nodoProyecto, "Investigador/es principal/es:"),
+                            Investigadores = ExtraerText(nodoProyecto, "Investigadores:"),
+                            InvestigadoresTecnicos = ExtraerText(nodoProyecto, "Investigadores o Técnicos:"),
+                            Colaboradores = ExtraerText(nodoProyecto, "Otros colaboradores:")
+                        };                        
 
                         context.Proyectos.Add(nuevoProyecto);
 
