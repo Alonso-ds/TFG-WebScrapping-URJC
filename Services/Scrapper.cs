@@ -275,9 +275,9 @@ public class Scrapper
                 string content = string.Join(",", nombres);
 
                 if(etiqueta.Contains("principal")) nuevoProyecto.InvPrincipales = content;
-                else if(etiqueta.Contains("Investigadores")) nuevoProyecto.Investigadores = content;
-                else if(etiqueta.Contains("técnicos")) nuevoProyecto.InvestigadoresTecnicos = content;
+                else if(etiqueta.Contains("técnico") || etiqueta.Contains("tecnico")) nuevoProyecto.InvestigadoresTecnicos = content;
                 else if(etiqueta.Contains("colaboradores")) nuevoProyecto.Colaboradores = content;
+                else if(etiqueta.Contains("investigadores")) nuevoProyecto.Investigadores = content;
             }
         }
     } 
