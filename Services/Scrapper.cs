@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
+using Microsoft.Extensions.Options;
 
 public class Scrapper
 {
@@ -203,10 +204,10 @@ public class Scrapper
                             FechaFinal = ExtraerText(nodoProyecto, "Fecha fin:"),
                             EntidadFinanciadora = ExtraerText(nodoProyecto, "Entidad financiera:"),
                             RefExterna = ExtraerText(nodoProyecto, "Referencia externa:"),
-                            InvPrincipales = ExtraerText(nodoProyecto, "Investigador/es principal/es:"),
-                            Investigadores = ExtraerText(nodoProyecto, "Investigadores:"),
-                            InvestigadoresTecnicos = ExtraerText(nodoProyecto, "Investigadores o Técnicos:"),
-                            Colaboradores = ExtraerText(nodoProyecto, "Otros colaboradores:")
+                            InvPrincipales = ExtraerConComas(nodoProyecto, "Investigador/es principal/es:"),
+                            Investigadores = ExtraerConComas(nodoProyecto, "Investigadores:"),
+                            InvestigadoresTecnicos = ExtraerConComas(nodoProyecto, "Investigadores o Técnicos:"),
+                            Colaboradores = ExtraerConComas(nodoProyecto, "Otros colaboradores:")
                         };                        
 
                         context.Proyectos.Add(nuevoProyecto);
@@ -240,26 +241,58 @@ public class Scrapper
 
     private string? ExtraerText(HtmlNode nodo, string etiqueta)
     {
-        string xpath =$".//b[contains(text(), '{etiqueta}')]/following-sibling::text()[1]";
+        string xpath =$".//b[contains(., '{etiqueta}')]";
         var nodoTexto = nodo.SelectSingleNode(xpath);
 
         if (nodoTexto != null)
         {
-            string content = nodoTexto.InnerText.Replace("&nbsp", "").Trim();
-            return string.IsNullOrWhiteSpace(content) ? null : content;
+            var nodoSig = nodoTexto.NextSibling;
+            if (nodoSig != null)
+            {
+                Console.WriteLine($"[LINEA] Para '{etiqueta}' encontramos nodo tipo: {nodoSig.NodeType} con texto: '{nodoSig.InnerText.Trim()}'");
+                var content = nodoSig.InnerText.Replace("&nbsp;", " ").Replace("\n", "").Replace("\r", "").Trim();
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    content = nodoSig.NextSibling.InnerText.Trim();
+                    Console.WriteLine($"[LINEA] Usando segundo hermano: '{content}");
+                }
+                return string.IsNullOrWhiteSpace(content) ? content : null;
+            }
         }
         return null;
     }
 
     private string? ExtraerConComas(HtmlNode nodo, string etiqueta)
     {
-        string xpath =$".//b[contains(text(), '{etiqueta}')]/ancestor::p/following-sibling::ul[1]/li";
-        var nodoList = nodo.SelectNodes(xpath);
+        var nodoB = nodo.SelectSingleNode($".//b[contains(., '{etiqueta}')]");
 
-        if (nodoList != null)
-        {
-            var nombres = nodoList.Select(n=> n.InnerText.Trim()).Where(n=> !string.IsNullOrWhiteSpace(n));
-            return string.Join(",", nombres);
+        if (nodoB != null)
+        {   
+            Console.WriteLine($"[LISTA] Encontrada cabecera de lista: '{etiqueta}'");
+            var padre = nodoB.ParentNode;
+            if(padre != null)
+            {
+                var nodoUL = padre.SelectSingleNode("following-sibling::ul[1]");
+                if(nodoUL == null)
+                {
+                    nodoUL = padre.ParentNode?.SelectSingleNode(".//ul");
+                }
+                if(nodoUL != null)
+                {
+                    var nodoLI = nodoUL.SelectNodes(".//li");
+                    if(nodoLI != null)
+                    {
+                        var nombres = nodoLI.Select(n => n.InnerText.Replace("\n","").Trim()).Where(n => !string.IsNullOrWhiteSpace(n));
+                        string content = string.Join(", ", nombres);
+                        Console.WriteLine($"[LISTA] Nombres encontrados: {content}, en total {nodoLI.Count} nombres");
+                        return content;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[LISTA ERROR] No se encuentra ningun <ul> hermano para {etiqueta}");
+                }
+            }
         }
         return null;
     } 
