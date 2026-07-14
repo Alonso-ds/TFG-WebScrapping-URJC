@@ -29,4 +29,5 @@ public class Docente
     public int? Docentia {get; set;}
 
     public List<Proyecto> Proyectos{get; set;} = new();
+    public List<Publicacion> Publicaciones{get; set; } = new();
 }

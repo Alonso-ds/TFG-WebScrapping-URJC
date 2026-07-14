@@ -5,11 +5,14 @@ using System.Reflection.Metadata;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Options;
+using System.Text.RegularExpressions;
+using System.Text.Json;
 
 public class Scrapper
 {
 
     private readonly HttpClient _client;
+    private readonly HttpClient _httpClient = new HttpClient();
 
     public Scrapper(HttpClient client)
     {
@@ -152,6 +155,8 @@ public class Scrapper
             docente.SexeniosInvestigación = ExtraerInt(htmlDoc, "Sexenios investigación");
             docente.SexeniosTransferencia = ExtraerInt(htmlDoc, "Sexenios transferencia");
             docente.Docentia = ExtraerInt(htmlDoc, "Docentia");
+
+            ExtraerPublicaciones(htmlDoc.DocumentNode, docente, context);
         }
         catch (Exception ex)
         {
@@ -281,4 +286,60 @@ public class Scrapper
             }
         }
     } 
+
+    private async Task ExtraerPublicaciones(HtmlNode nodo, Docente docente, UniDbContext context)
+    {
+       var nodoIdPdi = nodo.SelectSingleNode("//input[@name='idPDI']");
+       if (nodoIdPdi == null)
+        {
+            Console.WriteLine("No se encuentra el ID en PDI");
+            return;
+        }
+        string idPDI = nodoIdPdi.GetAttributeValue("value", "").Trim();
+        if(string.IsNullOrEmpty(idPDI)) return;
+
+        string urlAPI = $"https://servicios.urjc.es/pdi/public/api/investigadores/{idPDI}/publicaciones";
+
+        try
+        {
+            string jsonRespuesta = await _httpClient.GetStringAsync(urlAPI);
+            var datosApi = JsonSerializer.Deserialize<RespuestaPublicacionesApi>(jsonRespuesta);
+            if(datosApi == null || datosApi.Publicaciones.Count == 0) return;
+
+            Console.WriteLine($"Descargadas {datosApi.Publicaciones.Count} publicaciones");
+
+            foreach(var pubDTO in datosApi.Publicaciones)
+            {
+                if(string.IsNullOrWhiteSpace(pubDTO.Titulo)) continue;
+                string titulo = pubDTO.Titulo.Trim();
+
+                Publicacion? pubExistente = context.Publicaciones.FirstOrDefault(p => p.Titulo == titulo);
+
+                if(pubExistente != null)
+                {
+                    if (!docente.Publicaciones.Contains(pubExistente))
+                    {
+                        docente.Publicaciones.Add(pubExistente);
+                        Console.WriteLine($"Publicacion existente enlazada {titulo}");
+                    }
+                    continue;
+                }
+                var nuevaPubli = new Publicacion
+                {
+                    Titulo = titulo,
+                    Autores = pubDTO.Autores,
+                    Tipo = pubDTO.Tipo,
+                    Fecha = pubDTO.Fecha,
+                    Doi = pubDTO.DOI,
+                    Cuartil = $"{pubDTO.CuartilScopus} {pubDTO.CuartilWos}".Trim()
+                };
+                docente.Publicaciones.Add(nuevaPubli);
+                Console.WriteLine($"Nueva publicacion! {titulo}");
+            }
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine($"Error al extraer publicaciones: {ex.Message}");
+        }
+    }
 }
