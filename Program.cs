@@ -18,6 +18,7 @@ class Program
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<UniDbContext>();
             await dbContext.Database.MigrateAsync();
+            await dbContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
         }
         var crawler = host.Services.GetRequiredService<Crawler>();
         try
@@ -28,6 +29,6 @@ class Program
         {
             Console.WriteLine($"Crash message: {ex.Message}");
         }
-        
+
     }
 }

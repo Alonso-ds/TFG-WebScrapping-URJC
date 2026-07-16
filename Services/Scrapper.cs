@@ -7,6 +7,7 @@ using HtmlAgilityPack;
 using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 public class Scrapper
 {
@@ -16,7 +17,7 @@ public class Scrapper
 
     public Scrapper(HttpClient client)
     {
-        _client = client; 
+        _client = client;
     }
 
     public async Task<List<DocenteDTO>> ScrapProfesor(string letra)
@@ -101,41 +102,41 @@ public class Scrapper
                 docente.Centro = nodoCentro.InnerText.Trim();
                 Console.WriteLine($"Centro: {docente.Centro}");
             }
- 
+
             var nodoDepartamento = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Departamento')]/following-sibling::a");
-            if(nodoDepartamento != null)
+            if (nodoDepartamento != null)
             {
                 docente.Departamento = nodoDepartamento.InnerText.Trim();
                 Console.WriteLine($"Departamento: {docente.Departamento}");
             }
             var nodoArea = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Área')]/following-sibling::span");
-            if(nodoArea != null)
+            if (nodoArea != null)
             {
                 docente.Area = nodoArea.InnerText.Trim();
                 Console.WriteLine($"Área: {docente.Area}");
             }
             var nodoGrupoInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo de investigación')]/following-sibling::a");
-            if(nodoGrupoInv!= null)
+            if (nodoGrupoInv != null)
             {
                 docente.GrupoInvestigación = nodoGrupoInv.InnerText.Trim();
                 Console.WriteLine($"Grupo investigacion: {docente.GrupoInvestigación}");
             }
-            
+
             var nodoCentroInv = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Centro/Instituto de investigación')]/following-sibling::a");
-            if(nodoCentroInv != null)
+            if (nodoCentroInv != null)
             {
                 docente.CentroInvestigación = nodoCentroInv.InnerText.Trim();
                 Console.WriteLine($"Centro Investigacion: {docente.CentroInvestigación}");
             }
             var nodoGrupoDocente = htmlDoc.DocumentNode.SelectSingleNode("//h4[contains(text(), 'Grupo docente')]/following-sibling::a");
-            if(nodoGrupoDocente != null)
+            if (nodoGrupoDocente != null)
             {
                 docente.GrupoDocente = nodoGrupoDocente.InnerText.Trim();
                 Console.WriteLine($"Grupo Docente: {docente.GrupoDocente}");
             }
 
             var nodoBiografia = htmlDoc.DocumentNode.SelectSingleNode("//div[@id='tab_presentacion']//li[contains(@class, 'list-group-item')]");
-            if(nodoBiografia != null)
+            if (nodoBiografia != null)
             {
                 string textoLimpio = nodoBiografia.InnerText.Trim();
 
@@ -149,14 +150,14 @@ public class Scrapper
             }
             Console.WriteLine($"¿Biografía?: {(docente.TieneBiografia ? "SÍ" : "NO")}");
 
-            ExtraerProyectos(htmlDoc.DocumentNode, docente, context);
+            await ExtraerProyectos(htmlDoc.DocumentNode, docente, context);
 
             docente.Quinquenios = ExtraerInt(htmlDoc, "Quinquenios");
             docente.SexeniosInvestigación = ExtraerInt(htmlDoc, "Sexenios investigación");
             docente.SexeniosTransferencia = ExtraerInt(htmlDoc, "Sexenios transferencia");
             docente.Docentia = ExtraerInt(htmlDoc, "Docentia");
 
-            ExtraerPublicaciones(htmlDoc.DocumentNode, docente, context);
+            await ExtraerPublicaciones(htmlDoc.DocumentNode, docente, context);
         }
         catch (Exception ex)
         {
@@ -168,18 +169,18 @@ public class Scrapper
     {
         string xpath = $"//div[contains(@class, 'profile-stat-text') and contains(., '{tipo}')]/preceding-sibling::div[contains(@class, 'profile-stat-title')]";
         var nodoInt = htmlDoc.DocumentNode.SelectSingleNode(xpath);
-        if(nodoInt != null)
+        if (nodoInt != null)
         {
             string intLimpio = nodoInt.InnerText.Trim();
-            if(int.TryParse(intLimpio, out int resultado))
+            if (int.TryParse(intLimpio, out int resultado))
             {
                 return resultado;
             }
         }
         return null;
     }
-    
-    private void ExtraerProyectos(HtmlNode documentNode, Docente docente, UniDbContext context)
+
+    private async Task ExtraerProyectos(HtmlNode documentNode, Docente docente, UniDbContext context)
     {
         var nodosProyectos = documentNode.SelectNodes("//div[@id='tab_proyectos']//div[contains(@class, 'panel-default')]");
         if (nodosProyectos == null)
@@ -190,16 +191,16 @@ public class Scrapper
 
         Console.WriteLine($"Se han encontrado {nodosProyectos.Count} proyectos");
 
-        foreach(var nodoProyecto in nodosProyectos)
+        foreach (var nodoProyecto in nodosProyectos)
         {
             var nodoTitulo = nodoProyecto.SelectSingleNode(".//a[contains(@class, 'accordion-toggle')]") ?? nodoProyecto.SelectSingleNode(".//h4[contains(@class, 'panel-title')]");
-            if(nodoTitulo == null) continue;
+            if (nodoTitulo == null) continue;
 
             string tituloProyecto = nodoTitulo.InnerText.Replace("\n", "").Replace("\r", "").Trim();
-            if(string.IsNullOrWhiteSpace(tituloProyecto)) continue;
+            if (string.IsNullOrWhiteSpace(tituloProyecto)) continue;
             // Y si mejor por referencia interna?
-            Proyecto ? proyectoExistente = context.Proyectos.FirstOrDefault(p => p.Titulo == tituloProyecto);
-            if(proyectoExistente != null)
+            Proyecto? proyectoExistente = await context.Proyectos.FirstOrDefaultAsync(p => p.Titulo == tituloProyecto);
+            if (proyectoExistente != null)
             {
                 if (!docente.Proyectos.Contains(proyectoExistente))
                 {
@@ -208,22 +209,22 @@ public class Scrapper
                 }
                 continue;
             }
-            var nuevoProyecto = new Proyecto{Titulo = tituloProyecto};
+            var nuevoProyecto = new Proyecto { Titulo = tituloProyecto };
 
             var textos = nodoProyecto.SelectNodes(".//div[@class='panel-body']//p");
 
-            if(textos != null)
+            if (textos != null)
             {
-                foreach(var texto in textos)
+                foreach (var texto in textos)
                 {
                     string textoLimpio = texto.InnerText.Replace("&nbsp", " ").Replace("\u00A0", " ").Trim().ToLower();
 
-                    if(textoLimpio.Contains("fecha inicio:") || textoLimpio.Contains("fecha fin:") || textoLimpio.Contains("referencia externa") || textoLimpio.Contains("referencia interna") || textoLimpio.Contains("entidad financiadora"))
+                    if (textoLimpio.Contains("fecha inicio:") || textoLimpio.Contains("fecha fin:") || textoLimpio.Contains("referencia externa") || textoLimpio.Contains("referencia interna") || textoLimpio.Contains("entidad financiadora"))
                     {
                         Console.WriteLine("INFO METADATO");
                         ExtraerTextoSuelto(texto, nuevoProyecto);
                     }
-                    else if(textoLimpio.Contains("principal") || textoLimpio.Contains("investigadores") || textoLimpio.Contains("técnico") || textoLimpio.Contains("colaboradores"))
+                    else if (textoLimpio.Contains("principal") || textoLimpio.Contains("investigadores") || textoLimpio.Contains("técnico") || textoLimpio.Contains("colaboradores"))
                     {
                         Console.WriteLine("INFO NOMBRES");
                         ExtraerNombres(texto, nuevoProyecto);
@@ -244,9 +245,9 @@ public class Scrapper
         var nodosB = texto.SelectNodes(".//b");
         if (nodosB == null) return;
 
-        foreach(var linea in nodosB)
+        foreach (var linea in nodosB)
         {
-            string etiqueta = linea.InnerText.Replace("&nbsp", " ").Replace("\u00A0", " ").Replace(":","").Trim().ToLower();
+            string etiqueta = linea.InnerText.Replace("&nbsp", " ").Replace("\u00A0", " ").Replace(":", "").Trim().ToLower();
             var NextLine = linea.NextSibling;
             string content = NextLine?.InnerText.Replace("&nbsp", " ").Replace("\u00A0", " ").Replace("\n", "").Replace("\r", "").Trim() ?? "";
 
@@ -255,48 +256,48 @@ public class Scrapper
                 content = NextLine.NextSibling.InnerText.Replace("&nbsp", " ").Replace("\u00A0", " ").Trim();
             }
 
-            if(etiqueta.Contains("fecha inicio")) nuevoProyecto.FechaInicio = content;
-            else if(etiqueta.Contains("fecha fin")) nuevoProyecto.FechaFinal = content;
-            else if(etiqueta.Contains("entidad financiadora")) nuevoProyecto.EntidadFinanciadora = content;
-            else if(etiqueta.Contains("referencia externa")) nuevoProyecto.RefExterna = content;
-            else if(etiqueta.Contains("referencia interna")) nuevoProyecto.RefInterna = content;
+            if (etiqueta.Contains("fecha inicio")) nuevoProyecto.FechaInicio = content;
+            else if (etiqueta.Contains("fecha fin")) nuevoProyecto.FechaFinal = content;
+            else if (etiqueta.Contains("entidad financiadora")) nuevoProyecto.EntidadFinanciadora = content;
+            else if (etiqueta.Contains("referencia externa")) nuevoProyecto.RefExterna = content;
+            else if (etiqueta.Contains("referencia interna")) nuevoProyecto.RefInterna = content;
         }
     }
 
     private void ExtraerNombres(HtmlNode texto, Proyecto nuevoProyecto)
     {
         var nodoB = texto.SelectSingleNode(".//b");
-        if(nodoB == null) return;
+        if (nodoB == null) return;
 
         string etiqueta = nodoB.InnerText.Replace("&nbsp", " ").Replace("\u00A0", " ").Replace(":", "").Trim().ToLower();
         var nodoUL = texto.SelectSingleNode("following-sibling::ul[1]");
 
-        if(nodoUL != null)
+        if (nodoUL != null)
         {
             var nodosLI = nodoUL.SelectNodes(".//li");
-            if(nodosLI != null)
+            if (nodosLI != null)
             {
                 var nombres = nodosLI.Select(n => n.InnerText.Replace("\n", "").Trim()).Where(n => !string.IsNullOrWhiteSpace(n));
                 string content = string.Join(",", nombres);
 
-                if(etiqueta.Contains("principal")) nuevoProyecto.InvPrincipales = content;
-                else if(etiqueta.Contains("técnico") || etiqueta.Contains("tecnico")) nuevoProyecto.InvestigadoresTecnicos = content;
-                else if(etiqueta.Contains("colaboradores")) nuevoProyecto.Colaboradores = content;
-                else if(etiqueta.Contains("investigadores")) nuevoProyecto.Investigadores = content;
+                if (etiqueta.Contains("principal")) nuevoProyecto.InvPrincipales = content;
+                else if (etiqueta.Contains("técnico") || etiqueta.Contains("tecnico")) nuevoProyecto.InvestigadoresTecnicos = content;
+                else if (etiqueta.Contains("colaboradores")) nuevoProyecto.Colaboradores = content;
+                else if (etiqueta.Contains("investigadores")) nuevoProyecto.Investigadores = content;
             }
         }
-    } 
+    }
 
     private async Task ExtraerPublicaciones(HtmlNode nodo, Docente docente, UniDbContext context)
     {
-       var nodoIdPdi = nodo.SelectSingleNode("//input[@name='idPDI']");
-       if (nodoIdPdi == null)
+        var nodoIdPdi = nodo.SelectSingleNode("//input[@name='idPDI']");
+        if (nodoIdPdi == null)
         {
             Console.WriteLine("No se encuentra el ID en PDI");
             return;
         }
         string idPDI = nodoIdPdi.GetAttributeValue("value", "").Trim();
-        if(string.IsNullOrEmpty(idPDI)) return;
+        if (string.IsNullOrEmpty(idPDI)) return;
 
         string urlAPI = $"https://servicios.urjc.es/pdi/public/api/investigadores/{idPDI}/publicaciones";
 
@@ -304,18 +305,18 @@ public class Scrapper
         {
             string jsonRespuesta = await _httpClient.GetStringAsync(urlAPI);
             var datosApi = JsonSerializer.Deserialize<RespuestaPublicacionesApi>(jsonRespuesta);
-            if(datosApi == null || datosApi.Publicaciones.Count == 0) return;
+            if (datosApi == null || datosApi.Publicaciones.Count == 0) return;
 
             Console.WriteLine($"Descargadas {datosApi.Publicaciones.Count} publicaciones");
 
-            foreach(var pubDTO in datosApi.Publicaciones)
+            foreach (var pubDTO in datosApi.Publicaciones)
             {
-                if(string.IsNullOrWhiteSpace(pubDTO.Titulo)) continue;
+                if (string.IsNullOrWhiteSpace(pubDTO.Titulo)) continue;
                 string titulo = pubDTO.Titulo.Trim();
 
-                Publicacion? pubExistente = context.Publicaciones.FirstOrDefault(p => p.Titulo == titulo);
+                Publicacion? pubExistente = await context.Publicaciones.FirstOrDefaultAsync(p => p.Titulo == titulo);
 
-                if(pubExistente != null)
+                if (pubExistente != null)
                 {
                     if (!docente.Publicaciones.Contains(pubExistente))
                     {
@@ -337,7 +338,7 @@ public class Scrapper
                 Console.WriteLine($"Nueva publicacion! {titulo}");
             }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine($"Error al extraer publicaciones: {ex.Message}");
         }

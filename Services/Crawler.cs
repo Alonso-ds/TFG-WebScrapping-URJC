@@ -24,12 +24,12 @@ public class Crawler
             {
                 string busqueda = $"{letra1}{letra2}";
                 List<DocenteDTO> dtos = await _scrapper.ScrapProfesor(busqueda);
-                if(dtos == null ||dtos.Count == 0)
+                if (dtos == null || dtos.Count == 0)
                 {
                     Console.WriteLine($"Busqueda {busqueda} sin resultados");
                     continue;
                 }
-                
+
                 foreach (var dto in dtos)
                 {
                     if (!string.IsNullOrWhiteSpace(dto.Nombre))
@@ -50,9 +50,12 @@ public class Crawler
                             Console.WriteLine($"Profesor nuevo: {nuevoDocente.Nombre}");
                         }
                     }
-                    try{
+                    try
+                    {
                         await _context.SaveChangesAsync();
-                    }catch(Exception ex)
+                        _context.ChangeTracker.Clear();
+                    }
+                    catch (Exception ex)
                     {
                         Console.WriteLine($"Error BBDD: {ex.Message}");
                         if (ex.InnerException != null)
