@@ -1,9 +1,13 @@
 public class Asignatura
 {
     public int Id {get; set;}
-    public required string NombreAsignatura{get; set;}
-    public required string Grado{get; set;}
 
-    public int DocenteId{get; set;}
-    public required Docente Docente{get; set;}
+    public string? Codigo {get; set;}
+    public string? Nombre {get; set;}
+    public string? TipoEstudio {get; set;}
+    public string? Grado {get; set;}
+    public string? Horas {get; set;}
+
+    public List<Docente> Docentes {get; set;} = new();
+
 }

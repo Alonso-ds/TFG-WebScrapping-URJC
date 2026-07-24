@@ -30,4 +30,8 @@ public class Docente
 
     public List<Proyecto> Proyectos{get; set;} = new();
     public List<Publicacion> Publicaciones{get; set; } = new();
+
+    public List<Asignatura> Asignaturas {get; set;} = new();
+
+    public List<Tfe> Tfes {get; set;} = new();
 }

@@ -34,7 +34,7 @@ public class Crawler
                 {
                     if (!string.IsNullOrWhiteSpace(dto.Nombre))
                     {
-                        var docenteExistente = await _context.Docentes.Include(d => d.Proyectos).Include(d => d.Publicaciones).FirstOrDefaultAsync(d => d.UrlPerfil == dto.UrlPerfil);
+                        var docenteExistente = await _context.Docentes.Include(d => d.Proyectos).Include(d => d.Publicaciones).Include(d => d.Asignaturas).Include(d => d.Tfes).FirstOrDefaultAsync(d => d.UrlPerfil == dto.UrlPerfil);
 
                         if (docenteExistente != null)
                         {
